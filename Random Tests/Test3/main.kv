@@ -1,0 +1,41 @@
+<FloatLayout>
+
+
+    GridLayout:
+        pos_hint: {'x': 0,'top': 1}
+        size_hint: 1, 0.7
+        cols: 2
+
+        RecycleBoxLayout:
+            id: upNext
+            orientation: "vertical"
+
+        RecycleBoxLayout:
+            id: history
+            orientation: "vertical"
+
+    GridLayout:
+        pos_hint: {'x': 0, 'top': 0.1}
+        size_hint: 1, 0.1
+        cols: 5
+
+        Button:
+            id: loop
+            text: 'Loop'
+
+        Button:
+            id: prev
+            text: 'Previous'
+
+        Button:
+            id: playPause
+            text: 'Play/Pause'
+
+        Button:
+            id: next
+            text: 'Next'
+
+        Button:
+            id: shuffle
+            text: 'Shuffle'
+

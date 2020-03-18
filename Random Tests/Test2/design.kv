@@ -1,0 +1,39 @@
+<Button>
+    font_size: 40
+    color: 0.3, 0.6, 0.7, 1
+    size_hint: 1, 0.2
+
+<MyGrid>
+
+    name: name
+    email: email
+
+    FloatLayout:
+        size: root.width, root.height
+
+        Label:
+            pos_hint: {'x': 0,'top': 1}
+            size_hint: 0.5, 0.2
+            text: 'Name:'
+
+        TextInput:
+            id: name
+            pos_hint: {'x': 0.5,'top': 1}
+            size_hint: 0.5, 0.2
+            multiline: False
+
+        Label:
+            pos_hint: {'x': 0,'top': 0.8}
+            size_hint: 0.5, 0.2
+            text: 'Email:'
+
+        TextInput:
+            id: email
+            pos_hint: {'x': 0.5,'top': 0.8}
+            size_hint: 0.5, 0.2
+            multiline: False
+
+        Button:
+            id: playStop
+            text: "Play" if playStop.state == 'normal' else 'stop'
+            on_press: root.submit()
