@@ -1,21 +1,12 @@
 import threading
-import sqlite3
-import pandas as pd
-import webbrowser
 import time
-import numpy as np
-from kivy.core.window import Window
-from kivy.uix.button import Button
-from kivy.uix.widget import Widget
-from random import sample
+import webbrowser
+from googleapiclient.discovery import build
+import pandas as pd
 from kivy.app import App
+from kivy.core.window import Window
 from kivy.lang import Builder
 from kivy.uix.boxlayout import BoxLayout
-from kivy.properties import ObjectProperty
-from os import listdir
-
-from kivy.uix.dropdown import DropDown
-from kivy.factory import Factory
 
 kv = """
 #:import Factory kivy.factory.Factory
@@ -33,7 +24,7 @@ kv = """
 <CustomDropdown@DropDown>:
     id: dropdown
     on_select:
-        app.root.ids.btn.text = '{}'.format(args[1])
+        app.root.ids.bt1.text = '{}'.format(args[1])
         
 
     Button:
@@ -41,44 +32,34 @@ kv = """
         text: '10 minutes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.timing10()
-        on_release:
-            dropdown.select(btn1.text)
+        on_release:dropdown.select(btn1.text)
 
     Button:
         id: btn2
         text: '15 minutes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.timing15()
-        on_release:
-            dropdown.select(btn2.text)
+        on_release:dropdown.select('15 minutes')
     Button:
         id: btn3
         text: '30 minutes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.timing30()
-        on_release:
-            dropdown.select(btn3.text)
+        on_release:dropdown.select('30 minutes')
         
     Button:
         id: btn4
         text: '45 minutes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.timing45()
-        on_release:
-            dropdown.select(btn4.text)
+        on_release:dropdown.select('45 minutes')
         
     Button:
         id: btn5
         text: '60 minutes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.timing60()
-        on_release:
-            dropdown.select(btn5.text)
+        on_release:dropdown.select('60 minutes')
         
     
 <CDropdown@DropDown>:
@@ -88,32 +69,32 @@ kv = """
         
 
     Button:
-        id: btn1
+        id: b1
         text: 'Videos'
         size_hint_y: None
         height: '48dp'
-        on_press: root.Genre_Video()
+        
         on_release:
-            ddown.select(btn1.text)
+            ddown.select('Videos')
         
 
     Button:
-        id: btn2
+        id: b2
         text: 'Puzzles'
         size_hint_y: None
         height: '48dp'
-        on_press: root.Genre_Puzzle()
+        
         on_release:
-            ddown.select(btn2.text)
+            ddown.select('Puzzles')
         
     Button:
-        id: btn3
+        id: b3
         text: 'Jokes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.Genre_Joke()
+        
         on_release:
-            ddown.select(btn3.text)
+            ddown.select('Jokes')
         
 <TBreak>:
     canvas:
@@ -166,7 +147,7 @@ kv = """
         BoxLayout:
             spacing: dp(8)
             Button:
-                id: btn
+                id: bt1
                 text: 'Timing'
                 on_release: Factory.CustomDropdown().open(self)
                 size_hint_y: None
@@ -225,9 +206,21 @@ kv = """
             spacing: dp(8)
             Button:
                 text: 'Add'
-                on_press: root.additem()
-        
-        
+                on_press: root.additem('Playlist added',name_input.text,url_input.text,genre_input.text)
+    GridLayout:
+        cols: 1
+        rows: 1
+        size_hint_y: None
+        height: dp(40)
+        padding: dp(8)
+        spacing: dp(8)
+        BoxLayout:
+            spacing: dp(5)
+            Label:
+                id: updlbl
+                text:'Please press add button to add to playlist' if name_input.text!='' and url_input.text!='' else 'Please all values'
+                
+                font_size:'8pt'
         
     GridLayout:
         cols: 1
@@ -242,13 +235,6 @@ kv = """
                 text: "Snooze"
                 on_press: root.close()
 
-            
-        
-        
-        
-        
-        
-        
     RecycleView:
         id: rv
         scroll_type: ['bars', 'content']
@@ -294,7 +280,8 @@ class TBreak(BoxLayout):
             if TBreak.selectedGenre == 'NA':
                 TBreak.queueDF = TBreak.queueDF.append(TBreak.mainDF)
             else:
-                TBreak.queueDF = TBreak.queueDF.append(TBreak.mainDF.loc[(TBreak.mainDF.genre == TBreak.selectedGenre), :])
+                TBreak.queueDF = TBreak.queueDF.append(
+                    TBreak.mainDF.loc[(TBreak.mainDF.genre == TBreak.selectedGenre), :])
 
     def queue(self):
         TBreak.updateQueue(self)
@@ -314,7 +301,6 @@ class TBreak(BoxLayout):
         TBreak.historyDF = TBreak.historyDF.iloc[0:0]
         TBreak.queueDF = TBreak.queueDF.iloc[0:0]
         TBreak.updateQueue(self)
-        #TBreak.mainDF.counter = 0
         self.rv.data = []
 
     # second row buttons Play,next,history
@@ -331,7 +317,6 @@ class TBreak(BoxLayout):
                     self.rv.data.pop(0)
             time.sleep(0.5)
             currentWait = currentWait + 0.5
-
 
     def play(self):
         t1 = threading.Thread(target=TBreak.playForThread, args=(self,))
@@ -384,25 +369,162 @@ class TBreak(BoxLayout):
     def timing60(self):
         # code to be added
         print(mainDF)
+    '''
 
     # add playlist
-    def additem(self):
-        if self.name_input.text != "" and self.url_input.text != "" and self.genre_input.text != "":
-            # db.add_user(self.email.text, self.password.text, self.namee.text)
-            self.reset()
-    # def insertname(self, value):
-    # print(mainDF)
-    # add value to csv file name
-    # self.rv.data.insert(0, {'value': value or 'default value'})
-    # self.rv.refresh_from_data()
+    def additem(self, text, name, url, genre):
+        self.ids.updlbl.text = text
+        # if self.name_input.text != "" and self.url_input.text != "" and self.genre_input.text != "":
+        youtube_flag = True
+        if url != "" and genre != "":
+            url_list = url
+            url_list = url_list.replace(' ', '').split(',')
+            for url in url_list:
+                if 'https://www.youtube' not in url:
+                    youtube_flag = False
 
-    # def inserturl(self, value):
-    #   print(mainDF)
-    # add value url to csv file name
-    # if self.rv.data:
-    #   self.rv.data[0]['value'] = value or 'default new value'
-    #  self.rv.refresh_from_data()
-    '''
+            if youtube_flag:
+                # Add code from here
+                self.ids.updlbl.text = 'Youtube flag is True'
+                pass
+
+    def youtubeOperations(self, url_list, genre):
+        url_check = url_list[0].split('/')[3]
+
+        youTubeApiKey = "AIzaSyBPzZFvrWZdaHPrWrYfp8km-zGuTMJM-Qw"
+        youtube = build('youtube', 'v3', developerKey=youTubeApiKey)
+
+        if 'channel' == url_check:
+            for url in url_list:
+                channelId = url[4]
+
+                contentdata = youtube.channels().list(id=channelId, part='contentDetails').execute()
+                playlist_id = contentdata['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+                videos = []
+                next_page_token = None
+
+                while 1:
+                    res = youtube.playlistItems().list(playlistId=playlist_id,
+                                                       part='snippet',
+                                                       maxResults=50,
+                                                       pageToken=next_page_token).execute()
+                    videos += res['items']
+                    next_page_token = res.get('nextPageToken')
+
+                    if next_page_token is None:
+                        break
+
+                video_ids = list(map(lambda x: x['snippet']['resourceId']['videoId'], videos))
+                stats = []
+                for i in range(0, len(video_ids), 40):
+                    res = (youtube).videos().list(id=','.join(video_ids[i:i + 40]), part='statistics').execute()
+                    stats += res['items']
+
+                sNo = []
+                title = []
+                views = []
+                url = []
+                mainListSize = TBreak.mainDF.shape[0]
+                print('Main Data Frame Number of Rows:', mainListSize)
+                for i in range(len(videos)):
+                    sNo.append(mainListSize + i)
+                    title.append((videos[i])['snippet']['title'])
+                    url.append("https://www.youtube.com/watch?v=" + (video_ids[i]))
+                    views.append(int((stats[i])['statistics']['viewCount']))
+
+                data = {'id': sNo, 'title': title, 'url': url, 'views': views}
+                df_to_append = pd.DataFrame(data)
+                df_to_append['genre'] = genre
+                print(TBreak.mainDF.sort_index(ascending=False).head())
+                TBreak.mainDF.append(df_to_append)
+                print(TBreak.mainDF.sort_index(ascending=False).head())
+
+        elif 'watch?v=' in url_check:
+            # Call the videos.list method
+            # to retrieve video info
+            id_string = ''
+            for i in range(len(url_list)):
+                if i == 0:
+                    id_string = url_list[i].split('=')[1]
+                else:
+                    id_string = id_string + ',' + url_list[i].split('=')[1]
+
+            list_videos_byid = youtube.videos().list(
+                id=id_string,
+                part="id, snippet, contentDetails, statistics",
+            ).execute()
+
+            # extracting the results from search response
+            results = list_videos_byid.get("items", [])
+            # empty list to store video details
+            videos = []
+            n = 1
+            sNo = []
+            title = []
+            views = []
+            url = []
+            mainListSize = TBreak.mainDF.shape[0]
+            for i in range(len(results)):
+                '''videos.append("% s (% s) (% s)"
+                              % (n, result["snippet"]["title"],
+                                 result["statistics"]['viewCount']))
+                n = n + 1'''
+                sNo.append(mainListSize+i)
+                title.append(results[i]["snippet"]["title"])
+                url.append('https://www.youtube.com/watch?v='+id_string.split(',')[i])
+                views.append(results[i]["statistics"]['viewCount'])
+
+            data = {'id': sNo, 'title': title, 'url': url, 'views': views}
+            df_to_append = pd.DataFrame(data)
+            df_to_append['genre'] = genre
+            print(TBreak.mainDF.sort_index(ascending=False).head())
+            TBreak.mainDF.append(df_to_append)
+            print(TBreak.mainDF.sort_index(ascending=False).head())
+            #print("Videos:\n", "\n".join(videos), "\n")
+        elif 'playlist?list=' in url_check:
+            for url in url_list:
+                playlistId = url.split('=')[1]
+                res = youtube.playlistItems().list(
+                    part="snippet",
+                    playlistId=playlistId,
+                    maxResults="50"
+                ).execute()
+
+                nextPageToken = res.get('nextPageToken')
+                while ('nextPageToken' in res):
+                    nextPage = youtube.playlistItems().list(
+                        part="snippet",
+                        playlistId=playlistId,
+                        maxResults="50",
+                        pageToken=nextPageToken
+                    ).execute()
+                    res['items'] = res['items'] + nextPage['items']
+
+                    if 'nextPageToken' not in nextPage:
+                        res.pop('nextPageToken', None)
+                    else:
+                        nextPageToken = nextPage['nextPageToken']
+
+                sNo = []
+                title = []
+                views = []
+                url = []
+                mainListSize = TBreak.mainDF.shape[0]
+                for i in range(len(res['items'])):
+                    sNo.append(mainListSize + i)
+                    title.append(res['items'][i]['snippet']['title'])
+                    url.append('https://www.youtube.com/watch?v=' + res['items'][i]['snippet']['resourceId']['videoId'])
+                    views.append(0)
+
+                data = {'id': sNo, 'title': title, 'url': url, 'views': views}
+                df_to_append = pd.DataFrame(data)
+                df_to_append['genre'] = genre
+                print(TBreak.mainDF.sort_index(ascending=False).head())
+                TBreak.mainDF.append(df_to_append)
+                print(TBreak.mainDF.sort_index(ascending=False).head())
+
+        else:
+            print('Unknown Item')
 
     # Exit button
     def close(self):

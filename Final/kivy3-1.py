@@ -3,6 +3,7 @@ import sqlite3
 import pandas as pd
 import webbrowser
 import time
+import numpy as np
 from kivy.core.window import Window
 from kivy.uix.button import Button
 from kivy.uix.widget import Widget
@@ -15,20 +16,6 @@ from os import listdir
 
 from kivy.uix.dropdown import DropDown
 from kivy.factory import Factory
-
-#kv_path = './kv/'
-#for kv in listdir(kv_path):
-#    Builder.load_file(kv_path + kv)
-
-conn = sqlite3.connect('Youtube1.db')
-c = conn.cursor()
-
-#read_clients = pd.read_csv(r'C:\Users\aksha\OneDrive\Documents\Take A Break\Final\YoutubeList.csv')
-#read_clients.to_sql('Youtube1', conn, if_exists='append',
-#                   index=False)  # Insert the values from the csv file into the table 'CLIENTS'
-#c.execute('''Select * from Youtube1''')
-mainDF = pd.read_csv(r'C:\Users\User\Documents\PythonCode\YoutubeList1.csv')
-#conn.commit()
 
 kv = """
 #:import Factory kivy.factory.Factory
@@ -46,7 +33,7 @@ kv = """
 <CustomDropdown@DropDown>:
     id: dropdown
     on_select:
-        app.root.ids.btn.text = '{}'.format(args[1])
+        app.root.ids.bt1.text = '{}'.format(args[1])
         
 
     Button:
@@ -54,44 +41,34 @@ kv = """
         text: '10 minutes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.timing10()
-        on_release:
-            dropdown.select(btn1.text)
+        on_release:dropdown.select(btn1.text)
 
     Button:
         id: btn2
         text: '15 minutes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.timing15()
-        on_release:
-            dropdown.select(btn2.text)
+        on_release:dropdown.select('15 minutes')
     Button:
         id: btn3
         text: '30 minutes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.timing30()
-        on_release:
-            dropdown.select(btn3.text)
+        on_release:dropdown.select('30 minutes')
         
     Button:
         id: btn4
         text: '45 minutes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.timing45()
-        on_release:
-            dropdown.select(btn4.text)
+        on_release:dropdown.select('45 minutes')
         
     Button:
         id: btn5
         text: '60 minutes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.timing60()
-        on_release:
-            dropdown.select(btn5.text)
+        on_release:dropdown.select('60 minutes')
         
     
 <CDropdown@DropDown>:
@@ -101,32 +78,32 @@ kv = """
         
 
     Button:
-        id: btn1
+        id: b1
         text: 'Videos'
         size_hint_y: None
         height: '48dp'
-        on_press: root.Genre_Video()
+        
         on_release:
-            ddown.select(btn1.text)
+            ddown.select('Videos')
         
 
     Button:
-        id: btn2
+        id: b2
         text: 'Puzzles'
         size_hint_y: None
         height: '48dp'
-        on_press: root.Genre_Puzzle()
+        
         on_release:
-            ddown.select(btn2.text)
+            ddown.select('Puzzles')
         
     Button:
-        id: btn3
+        id: b3
         text: 'Jokes'
         size_hint_y: None
         height: '48dp'
-        on_press: root.Genre_Joke()
+        
         on_release:
-            ddown.select(btn3.text)
+            ddown.select('Jokes')
         
 <TBreak>:
     canvas:
@@ -145,14 +122,14 @@ kv = """
         padding: dp(8)
         spacing: dp(16)
         Button:
-            text: 'PlayList'
-            on_press: root.playlist()
+            text: 'Queue'
+            on_press: root.queue()
         Button:
-            text: 'ReshuffleList'
-            on_press: root.reshuff()
+            text: 'Shuffle'
+            on_press: root.shuffle()
         Button:
-            text: 'ClearList'
-            on_press: root.clear()
+            text: 'Reset'
+            on_press: root.resetHistory()
         BoxLayout:
             spacing: dp(8)
             Button:
@@ -179,7 +156,7 @@ kv = """
         BoxLayout:
             spacing: dp(8)
             Button:
-                id: btn
+                id: bt1
                 text: 'Timing'
                 on_release: Factory.CustomDropdown().open(self)
                 size_hint_y: None
@@ -218,14 +195,14 @@ kv = """
             TextInput:
                 id: name_input
                 size_hint_x: 0.6
-                hint_text: 'Playlist name'
+                hint_text: 'Playlist Name'
                 padding: dp(10), dp(10), 0, 0
         BoxLayout:
             spacing: dp(8)
             TextInput:
                 id: url_input
                 size_hint_x: 0.6
-                hint_text: 'url'
+                hint_text: 'Url'
                 padding: dp(10), dp(10), 0, 0
         BoxLayout:
             spacing: dp(8)
@@ -238,7 +215,21 @@ kv = """
             spacing: dp(8)
             Button:
                 text: 'Add'
-                on_press: root.additem()
+                on_press: root.additem('Playlist added',name_input.text,url_input.text,btn.text)
+    GridLayout:
+        cols: 1
+        rows: 1
+        size_hint_y: None
+        height: dp(40)
+        padding: dp(8)
+        spacing: dp(8)
+        BoxLayout:
+            spacing: dp(5)
+            Label:
+                id: updlbl
+                text:'Please press add button to add to playlist' if name_input.text!='' and url_input.text!='' else 'Please all values'
+                
+                font_size:'8pt'
         
         
         
@@ -292,46 +283,58 @@ def reset():
 
 
 class TBreak(BoxLayout):
+    mainDF = pd.read_csv(r'C:\Users\User\Documents\DataScience\Python\PythonCode\YoutubeList1.csv')
+    historyDF = pd.read_csv(r'C:\Users\User\Documents\DataScience\Python\PythonCode\TakeABreak\History.csv')
+    queueDF = pd.read_csv(r'C:\Users\User\Documents\DataScience\Python\PythonCode\TakeABreak\Queue.csv')
     playFlag = False
     delay = 10
-    
-#first row buttons Playlist,reshuffle,clearlist
-    
-    def playlist(self):
-        print(mainDF.shape)
-        referenceDF = mainDF.loc[(mainDF.counter == 0)]
-        print(referenceDF.head())
-        self.rv.data = [{'value': referenceDF.iloc[i, 1]}
-                        for i in range(0, len(referenceDF.index))]
+    shuffleFlag = False
+    timing = 30
+    selectedGenre = 'NA'
 
-    
-    def reshuff(self):
-        #code to be added
-        print(mainDF)
-    def clear(self):
-        mainDF.counter = 0
+    # first row buttons Queue,Shuffle,Reset
+    def updateQueue(self):
+        if TBreak.queueDF.shape[0] == 0:
+            if TBreak.selectedGenre == 'NA':
+                TBreak.queueDF = TBreak.queueDF.append(TBreak.mainDF)
+            else:
+                TBreak.queueDF = TBreak.queueDF.append(TBreak.mainDF.loc[(TBreak.mainDF.genre == TBreak.selectedGenre), :])
+
+    def queue(self):
+        TBreak.updateQueue(self)
+        self.rv.data = [{'value': TBreak.queueDF.iloc[i, 1]}
+                        for i in range(0, len(TBreak.queueDF.index))]
+
+    def shuffle(self):
+        TBreak.updateQueue(self)
+        if TBreak.shuffleFlag:
+            TBreak.queueDF = TBreak.queueDF.sort_values('id')
+            TBreak.shuffleFlag = False
+        else:
+            TBreak.queueDF = TBreak.queueDF.sample(frac=1)
+            TBreak.shuffleFlag = True
+
+    def resetHistory(self):
+        TBreak.historyDF = TBreak.historyDF.iloc[0:0]
+        TBreak.queueDF = TBreak.queueDF.iloc[0:0]
+        TBreak.updateQueue(self)
+        #TBreak.mainDF.counter = 0
         self.rv.data = []
 
-    
-    
-    
-    
-#second row buttons Play,next,history
-
+    # second row buttons Play,next,history
     def playForThread(self):
+        TBreak.updateQueue(self)
         currentWait = 0
         while TBreak.playFlag:
             if currentWait % TBreak.delay == 0 and currentWait != 0:
-                jumpToRow = int(mainDF['counter'].sum())
-                link = mainDF.loc[jumpToRow, 'url']
-                mainDF.loc[jumpToRow, 'counter'] = 1
+                link = TBreak.queueDF.iloc[0, 2]
                 webbrowser.open(link)  # <- Main Class
+                TBreak.historyDF = TBreak.historyDF.append(TBreak.queueDF.iloc[0, :])
+                TBreak.queueDF = TBreak.queueDF.drop(TBreak.queueDF.index[0])
                 if self.rv.data:
                     self.rv.data.pop(0)
-
-                
-            time.sleep(1)
-            currentWait = currentWait + 1
+            time.sleep(0.5)
+            currentWait = currentWait + 0.5
 
 
     def play(self):
@@ -343,93 +346,85 @@ class TBreak(BoxLayout):
             t1.start()
 
     def proceed(self):
-        print(mainDF.shape)
-        j = int(mainDF['counter'].sum())
-        '''
-        j = j + 1
-        for i in range(j, len(df.index)):
-            gh = df.iloc[i, 2]
-            df.loc[i, 'counter'] = 1
-            time.sleep(5)
-            webbrowser.open(gh)
-        '''
-        mainDF.loc[j, 'counter'] = 1
-        
+        TBreak.queueDF = TBreak.queueDF.drop(TBreak.queueDF.index[0])
+        print(TBreak.queueDF.head())
+
     def history(self):
-        print(mainDF.shape)
-        referenceDF = mainDF.loc[(mainDF.counter == 1)]
-        print(referenceDF.head())
-        self.rv.data = [{'value': referenceDF.iloc[i, 1]}
-                        for i in range(0, len(referenceDF.index))]
+        print(TBreak.historyDF.head())
+        self.rv.data = [{'value': TBreak.historyDF.iloc[i, 1]}
+                        for i in range(0, len(TBreak.historyDF.index))]
 
-    
-    
-        
-#Genre area
+    '''Genre area
     def Genre_Puzzle(Self):
-        #code to be added
+        # code to be added
         print(mainDF)
+
     def Genre_Video(Self):
-        #code to be added
+        # code to be added
         print(mainDF)
+
     def Genre_Joke(Self):
-        #code to be added
-        print(mainDF)     
+        # code to be added
+        print(mainDF)
 
-#timing
-        
+        # timing
+
     def timing10(self):
-        #code to be added
+        # code to be added
         print(mainDF)
+
     def timing15(self):
-        #code to be added
+        # code to be added
         print(mainDF)
+
     def timing30(self):
-        #code to be added
+        # code to be added
         print(mainDF)
-    
+
     def timing45(self):
-        #code to be added
+        # code to be added
         print(mainDF)
+
     def timing60(self):
-        #code to be added
+        # code to be added
         print(mainDF)
-        
-        
-#add playlist
-        
-        
-        
+
+    # add playlist
     def additem(self):
-        if self.name_input.text != "" and self.url_input.text != "" and self.genre_input.text != "":         
-            #db.add_user(self.email.text, self.password.text, self.namee.text)
+        if self.name_input.text != "" and self.url_input.text != "" and self.genre_input.text != "":
+            # db.add_user(self.email.text, self.password.text, self.namee.text)
             self.reset()
-    #def insertname(self, value):
-        #print(mainDF)
-        #add value to csv file name
-        #self.rv.data.insert(0, {'value': value or 'default value'})
-        #self.rv.refresh_from_data()
+    # def insertname(self, value):
+    # print(mainDF)
+    # add value to csv file name
+    # self.rv.data.insert(0, {'value': value or 'default value'})
+    # self.rv.refresh_from_data()
 
-    #def inserturl(self, value):
-     #   print(mainDF)
-        #add value url to csv file name
-        #if self.rv.data:
-         #   self.rv.data[0]['value'] = value or 'default new value'
-          #  self.rv.refresh_from_data()
-            
-            
-#Exit button
+    # def inserturl(self, value):
+    #   print(mainDF)
+    # add value url to csv file name
+    # if self.rv.data:
+    #   self.rv.data[0]['value'] = value or 'default new value'
+    #  self.rv.refresh_from_data()
+    '''
+    def additem(self,txt,a,b,c):
+        self.ids.updlbl.text = txt
+        print(a)
+        print(b)
+        print(c)
+        #if self.name_input.text != "" and self.url_input.text != "" and self.genre_input.text != "":
+            # db.add_user(self.email.text, self.password.text, self.namee.text)
+        
+    # Exit button
     def close(self):
-        print(mainDF)
-        mainDF.to_csv(r'C:\Users\User\Documents\PythonCode\YoutubeList1.csv', index=False)
-
+        TBreak.mainDF.to_csv(r'C:\Users\User\Documents\DataScience\Python\PythonCode\YoutubeList1.csv', index=False)
+        TBreak.historyDF.to_csv(r'C:\Users\User\Documents\DataScience\Python\PythonCode\TakeABreak\History.csv', index=False)
+        TBreak.queueDF.to_csv(r'C:\Users\User\Documents\DataScience\Python\PythonCode\TakeABreak\Queue.csv', index=False)
         TBreak.playFlag = False
+        time.sleep(0.5)
         App.get_running_app().stop()
         Window.close()
 
-
-
-    
 
 class TakebreakApp(App):
     def build(self):
@@ -437,5 +432,6 @@ class TakebreakApp(App):
 
 
 reset()
+
 if __name__ == '__main__':
     TakebreakApp().run()
