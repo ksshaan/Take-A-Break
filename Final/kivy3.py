@@ -1,6 +1,7 @@
 import threading
 import time
 import webbrowser
+import os
 from googleapiclient.discovery import build
 import pandas as pd
 from kivy.app import App
@@ -26,7 +27,6 @@ kv = """
     on_select:
         app.root.ids.bt1.text = '{}'.format(args[1])
         
-
     Button:
         id: btn1
         text: '2'
@@ -66,7 +66,6 @@ kv = """
     on_select:
         app.root.ids.bt2.text = '{}'.format(args[1])
         
-
     Button:
         id: d1
         text: '30'
@@ -94,13 +93,11 @@ kv = """
         height: '48dp'
         on_release:delaydrop.select('120')
         
-    
 <CDropdown@DropDown>:
     id: ddown
     on_select:
         app.root.ids.bt3.text = '{}'.format(args[1])
         
-
     Button:
         id: b1
         text: 'Videos'
@@ -110,7 +107,6 @@ kv = """
         on_release:
             ddown.select('Videos')
         
-
     Button:
         id: b2
         text: 'Puzzles'
@@ -128,12 +124,12 @@ kv = """
         
         on_release:
             ddown.select('Jokes')
+            
 <GenreDropdown@DropDown>:
     id: gdown
     on_select:
         app.root.ids.gtn.text = '{}'.format(args[1])
         
-
     Button:
         id: g1
         text: 'Videos'
@@ -143,7 +139,6 @@ kv = """
         on_release:
             gdown.select('Videos')
         
-
     Button:
         id: g2
         text: 'Puzzles'
@@ -162,7 +157,6 @@ kv = """
         on_release:
             gdown.select('Jokes')
 
-        
 <TBreak>:
     canvas:
         Color:
@@ -187,7 +181,7 @@ kv = """
             on_press: root.shuffle()
         Button:
             text: 'Reset'
-            on_press: root.resetHistory()
+            on_press: root.resetHistory(bt3.text)
         BoxLayout:
             spacing: dp(8)
             Button:
@@ -231,7 +225,7 @@ kv = """
             spacing: dp(8)
             Button:
                 id: bt3
-                text: 'Select genre'
+                text: 'Select genre for Queue'
                 on_release: Factory.CDropdown().open(self)
                 size_hint_y: None
                 height: '30dp'
@@ -297,9 +291,7 @@ kv = """
                 text:'Please press add button to add to playlist' if gtn.text!='Select genre' and url_input.text!='' else 'Please add playlist url and genre'
                 
                 font_size:'10pt'
-        
-        
-        
+                
     GridLayout:
         cols: 1
         rows: 1
@@ -487,13 +479,14 @@ def youtubeOperations(url_list, genre):
 
 # TBreak: It contains every function which will be triggered when the user interacts with the GUI
 class TBreak(BoxLayout):
-    mainDF = pd.read_csv(r'C:\Users\aksha\OneDrive\Documents\Take A Break\Final\YoutubeList.csv')
-    historyDF = pd.read_csv(r'C:\Users\aksha\OneDrive\Documents\Take A Break\Final\History.csv')
-    queueDF = pd.read_csv(r'C:\Users\aksha\OneDrive\Documents\Take A Break\Final\Queue.csv')
+    workdir = os.getcwd()
+    mainDF = pd.read_csv(workdir + '//YoutubeList.csv')
+    historyDF = pd.read_csv(workdir + '//History.csv')
+    queueDF = pd.read_csv(workdir + '//Queue.csv')
     playFlag = False
     delay = 60
     shuffleFlag = False
-    run_duration = (4 * 60)
+    run_duration = 3 * 60 * 60
     selectedGenre = 'NA'
 
     # updateQueue: This function is used to populate the queue in case there are no items present in the queue
@@ -532,9 +525,11 @@ class TBreak(BoxLayout):
 
     # resetHistory: This functions resets the queue as well as history.
     # This function is triggered when the button 'Reset' is pressed in the GUI
-    def resetHistory(self):
+    def resetHistory(self, queueGenre):
         TBreak.historyDF = TBreak.historyDF.iloc[0:0]
         TBreak.queueDF = TBreak.queueDF.iloc[0:0]
+        if queueGenre != 'Select genre for Queue':
+            TBreak.selectedGenre = queueGenre
         TBreak.updateQueue(self)
         self.rv.data = []
 
@@ -545,8 +540,9 @@ class TBreak(BoxLayout):
 
         # Check if the playFlag is True. If it is true, the loop should work till the queue is empty or the run time
         # defined by the user has expired.
-        while TBreak.playFlag and currentWait <= run_duration:
-
+        while TBreak.playFlag:
+            if currentWait == run_duration:
+                TBreak.playFlag = False
             # To make sure that the video is played after the exact duration specified by the user.
             if currentWait % delay == 0 and currentWait != 0:
                 # Selecting the current url, executing it, adding it to the history and removing it from the queue.
@@ -573,11 +569,11 @@ class TBreak(BoxLayout):
 
         # Getting the values from the dropdown only if has been changed.
         if run_duration != 'Select timing in hours':
-            TBreak.run_duration = int(run_duration) * 60
+            TBreak.run_duration = int(run_duration) * 60 * 60
 
         # Getting the values from the dropdown only if has been changed.
         if delay != 'Select delay in minutes':
-            TBreak.delay = int(delay)
+            TBreak.delay = int(delay) * 60
 
         # Starting the thread
         t1 = threading.Thread(target=TBreak.playForThread, args=(self, TBreak.run_duration, TBreak.delay,))
@@ -594,6 +590,9 @@ class TBreak(BoxLayout):
     # This function is triggered when the button 'Next' is pressed.
     def proceed(self):
         TBreak.queueDF = TBreak.queueDF.drop(TBreak.queueDF.index[0])
+        # To pop the first item which is being displayed in the GUI
+        if self.rv.data:
+            self.rv.data.pop(0)
 
     # history: This function lets us view the items present in the history using the GUI.
     # This function is triggered when the button 'History' is pressed.
@@ -612,8 +611,8 @@ class TBreak(BoxLayout):
         self.ids.updlbl.text = 'Please wait while the items are being added to the database'
         youtube_flag = True
 
-        # Verifying whether the url and genre has been entered by the user.
-        if url != "" and genre != "":
+        # Verifying whether the url and genre has been entered by the user when the name field is left blank.
+        if name == '' and url != "" and genre != "":
             url_list = url
             url_list = url_list.replace(' ', '').split(',')
 
@@ -627,15 +626,72 @@ class TBreak(BoxLayout):
             # Call the 'youtubeOperations' function only when the flag is True.
             if youtube_flag:
                 youtubeOperations(url_list, genre)
+                self.ids.updlbl.text = 'Items added successfully'
 
-        self.ids.updlbl.text = 'Items added successfully'
+            else:
+                sNo = []
+                title = []
+                views = []
+                url = []
+                mainListSize = TBreak.mainDF.shape[0]
+
+                # Storing info of every video present in the channel to lists.
+                for i in range(len(url_list)):
+                    sNo.append(mainListSize + i)
+                    title.append(str(genre + ' ' + str(mainListSize + i)))
+                    url.append(url_list[i])
+                    views.append(0)
+
+                # Using the lists to creata a DataFrame. This DataFrame will be directly appended to the mainDF.
+                data = {'id': sNo, 'title': title, 'url': url, 'views': views}
+                df_to_append = pd.DataFrame(data)
+                df_to_append['genre'] = genre
+                TBreak.mainDF = TBreak.mainDF.append(df_to_append)
+                self.ids.updlbl.text = 'Items added successfully'
+
+
+        # In case name has been entered with other details.
+        elif name != '' and url != "" and genre != "":
+            name_list = name.replace(' ', '').split(',')
+            url_list = url.replace(' ', '').split(',')
+
+            if len(name_list) == len(url_list):
+                sNo = []
+                title = []
+                views = []
+                url = []
+                mainListSize = TBreak.mainDF.shape[0]
+
+                # Storing info of every video present in the channel to lists.
+                for i in range(len(url_list)):
+                    sNo.append(mainListSize + i)
+                    title.append(name_list[i])
+                    url.append(url_list[i])
+                    views.append(0)
+
+                # Using the lists to creata a DataFrame. This DataFrame will be directly appended to the mainDF.
+                data = {'id': sNo, 'title': title, 'url': url, 'views': views}
+                df_to_append = pd.DataFrame(data)
+                df_to_append['genre'] = genre
+                TBreak.mainDF = TBreak.mainDF.append(df_to_append)
+                self.ids.updlbl.text = 'Items added successfully'
+
+        # In case url or genre has been left empty.
+        elif url == '' or genre == '':
+            self.ids.updlbl.text = 'Items not added. Either URL or Genre is missing.'
+
+        # To handle any other condition.
+        else:
+            self.ids.updlbl.text = 'Items not added. Please enter the same no. of names or leave it blank'
+
+
 
     # close: This function wraps up the session and saves the current state of the application in csv and text files.
     # This function is triggered when the button 'Exit' is pressed.
     def close(self):
-        TBreak.mainDF.to_csv(r'C:\Users\aksha\OneDrive\Documents\Take A Break\Final\YoutubeList.csv', index=False)
-        TBreak.historyDF.to_csv(r'C:\Users\aksha\OneDrive\Documents\Take A Break\Final\History.csv', index=False)
-        TBreak.queueDF.to_csv(r'C:\Users\aksha\OneDrive\Documents\Take A Break\Final\Queue.csv', index=False)
+        TBreak.mainDF.to_csv(TBreak.workdir + '//YoutubeList.csv', index=False)
+        TBreak.historyDF.to_csv(TBreak.workdir + '//History.csv', index=False)
+        TBreak.queueDF.to_csv(TBreak.workdir + '//Queue.csv', index=False)
         TBreak.playFlag = False
         time.sleep(0.5)
         App.get_running_app().stop()
