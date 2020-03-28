@@ -543,11 +543,13 @@ class TBreak(BoxLayout):
         while TBreak.playFlag:
             if currentWait == run_duration:
                 TBreak.playFlag = False
+                break
+            if TBreak.queueDF.shape[0] == 0:
+                TBreak.playFlag = False
+                break
             # To make sure that the video is played after the exact duration specified by the user.
             if currentWait % delay == 0 and currentWait != 0:
                 # Selecting the current url, executing it, adding it to the history and removing it from the queue.
-                if TBreak.queueDF.shape[0] == 0:
-                    break
                 link = TBreak.queueDF.iloc[0, 2]
                 webbrowser.open(link)
                 TBreak.historyDF = TBreak.historyDF.append(TBreak.queueDF.iloc[0, :])
