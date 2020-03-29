@@ -124,6 +124,22 @@ kv = """
         
         on_release:
             ddown.select('Jokes')
+    Button:
+        id: b4
+        text: 'News'
+        size_hint_y: None
+        height: '48dp'
+        
+        on_release:
+            ddown.select('News')
+    Button:
+        id: b5
+        text: 'Games'
+        size_hint_y: None
+        height: '48dp'
+        
+        on_release:
+            ddown.select('Games')
             
 <GenreDropdown@DropDown>:
     id: gdown
@@ -156,6 +172,22 @@ kv = """
         
         on_release:
             gdown.select('Jokes')
+    Button:
+        id: g4
+        text: 'News'
+        size_hint_y: None
+        height: '48dp'
+        
+        on_release:
+            ddown.select('News')
+    Button:
+        id: g5
+        text: 'Games'
+        size_hint_y: None
+        height: '48dp'
+        
+        on_release:
+            ddown.select('Games')
 
 <TBreak>:
     canvas:
