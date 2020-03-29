@@ -678,13 +678,16 @@ class TBreak(BoxLayout):
                 TBreak.mainDF = TBreak.mainDF.append(df_to_append)
                 self.ids.updlbl.text = 'Items added successfully'
 
+            else:
+                self.ids.updlbl.text = 'Items not added. Please enter the same no. of names or leave it blank'
+
         # In case url or genre has been left empty.
         elif url == '' or genre == '':
             self.ids.updlbl.text = 'Items not added. Either URL or Genre is missing.'
 
         # To handle any other condition.
         else:
-            self.ids.updlbl.text = 'Items not added. Please enter the same no. of names or leave it blank'
+            self.ids.updlbl.text = 'Items not added. Situation not handled.'
 
 
 
